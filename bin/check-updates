@@ -4,8 +4,8 @@ set -e
 join() { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
 print_msg() { >&2 echo -e "\e[1m${1}\e[0m"; }
 looperr() { print_msg "=> Error updating '$1', line $2, exit-code $3"; }
+conterr() { print_msg "   Error: $1: $2"; }
 arerror() { print_msg "=> Error: $(basename $0): $*"; }
-conterr() { print_msg "=> Error: $1: $2"; }
 error()   { print_msg "=> Error: $(basename $0): $*"; }
 
 print_msg "=> Performing update check at $(date +"%a %d %b %Y, %H:%M")"
@@ -34,7 +34,7 @@ COUNT=${#containers[@]}
 i=0
 
 if [ $COUNT -gt 0 ]; then
-    print_msg "=> Found container configs: $(join ', ' ${containers[@]})"
+    print_msg "   Found container configs: $(join ', ' ${containers[@]})"
 else
     print_msg "   No container configs found"
     exit 0
