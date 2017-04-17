@@ -112,7 +112,7 @@ for CONT in ${containers[@]}; do
     fi
 
     # To build, or not to build, that is the question
-    ["$BUILD" != "true" ] && continue
+    [ "$BUILD" != "true" ] && continue
 
     print_msg "=> Building image $CONT"
 
