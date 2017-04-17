@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -e
+
+# Allow all users to read/write docker logs
+chmod 666 /dev/std*
+
+paths="$(echo "$CHGRP_PATHS" | sed -r 's|[^ ]+|-p &|g')"
+
+# Add cron job for performing auto-building
+rm -f /etc/crontabs/*
+echo "$CHECK_INTERVAL install-deps && as-builder $paths -- check-updates" | crontab -u root -
+
+exec "$@"

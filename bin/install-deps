@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+print_msg() { >&2 echo -e "\e[1m${1}\e[0m"; }
+
+deps="$(cat /config/*/depends 2>/dev/null | xargs)"
+if [ -n "$deps" ]; then
+    print_msg "=> Installing package dependencies for all containers"
+    apk --no-cache add $deps -f
+fi
