@@ -91,11 +91,11 @@ for CONT in ${containers[@]}; do
                 print_msg "   Previous build was '$PREV_RELEASE_VERSION'"
             fi
         else
-            print_msg "=> Warning: $PREV_RELEASE_FILE isn't a symbolic link,"
+            print_msg "   Warning: $PREV_RELEASE_FILE isn't a symbolic link,"
             print_msg "            continuing without previous version argument"
         fi
     else
-        print_msg "=> Warning: $PREV_RELEASE_FILE doesn't exist"
+        print_msg "   Warning: $PREV_RELEASE_FILE doesn't exist"
         DEFAULT_BUILD=true
     fi
 
