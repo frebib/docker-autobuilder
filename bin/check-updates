@@ -134,10 +134,21 @@ for CONT in ${containers[@]}; do
         print_msg "=> Building image $CONT_BUILD"
 
         # Load image environment variables
-        env="$([ -f env ] && cat env | xargs)"
+        ENV_FILES=()
+        # Add all present env files
+        for file in env build/$BUILD/env; do
+            if [ -f "$file" ]; then
+                ENV_FILES+=("$file")
+            fi
+        done
+        # Join files into command as to source them when executed
+        SOURCE_ENV=$(echo "${ENV_FILES[@]}" | sed -r 's|[^ ]+|. &; |g')
+        # Source env files into empty environment, removing defaults & 'export'
+        ENVS=$(env -i sh -c "set -o allexport; $SOURCE_ENV env" \
+            | sed -e '/^PWD=/d; /^SHLVL=/d; /^_=/d; s/^export//g' | xargs)
 
         # Build image using env
-        env $env build-image
+        env $ENVS build-image
 
         if [ $? -eq 0 ]; then
             print_msg "=> Successfully built $CONT_BUILD"
