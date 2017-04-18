@@ -50,13 +50,21 @@ for CONT in ${containers[@]}; do
     CONT_DIR="$CONFIG_DIR/$CONT"
     cd "$CONT_DIR"
 
-    builds=('')
+    BUILDS=( 'default' )
     if [ -d build ]; then
-        builds=($(cd build; find * -maxdepth 0 -type d | xargs))
+        BUILDS=($(cd build; find * -maxdepth 0 -type d | xargs))
     fi
 
-    for $BUILD in ${builds[@]}; do
-        echo "build: $CONT/$BUILD"
+    j=0
+    for BUILD in ${BUILDS[@]}; do
+        if [ "$BUILD" = "default" ]; then
+            unset BUILD
+        else
+            ((j+=1))
+            print_msg "\n=> Checking build $BUILD ($j/${#BUILDS[@]})"
+        fi
+
+        CONT_BUILD=$(join : "$CONT" $BUILD)
 
         for script in get-release compare-version; do
             if ! [ -e "$CONT_DIR/$script" ]; then
@@ -76,7 +84,7 @@ for CONT in ${containers[@]}; do
 
         if [ $ret -ne 0 ]; then
             echo "$version" | sed 's|^|   |g' >&2
-            conterr "$CONT" "get-release returned $ret"
+            conterr "$CONT_BUILD" "get-release returned $ret"
             continue
         fi
 
@@ -115,14 +123,14 @@ for CONT in ${containers[@]}; do
             case $ret in
                 0)   print_msg "   Release version is newer!"; BUILD=true;;
                 255) print_msg "   Already most recent version"; continue;;
-                *)   conterr "$CONT" "compare-version returned with exit code $ret";;
+                *)   conterr "$CONT_BUILD" "compare-version returned with exit code $ret";;
             esac
         fi
 
         # To build, or not to build, that is the question
         [ "$BUILD" != "true" ] && continue
 
-        print_msg "=> Building image $CONT"
+        print_msg "=> Building image $CONT_BUILD"
 
         # Load image environment variables
         env="$([ -f env ] && cat env | xargs)"
@@ -131,7 +139,7 @@ for CONT in ${containers[@]}; do
         env $env build-image
 
         if [ $? -eq 0 ]; then
-            print_msg "=> Successfully built $CONT"
+            print_msg "=> Successfully built $CONT_BUILD"
 
             print_msg "   Linking latest release as '.latest_build'"
             ln -sfv "$RELEASE_FILE" "$PREV_RELEASE_FILE"
