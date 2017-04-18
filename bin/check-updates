@@ -52,7 +52,7 @@ for CONT in ${containers[@]}; do
 
     builds=('')
     if [ -d build ]; then
-        builds=($(find . -maxdepth 0 -type d | xargs))
+        builds=($(cd build; find * -maxdepth 0 -type d | xargs))
     fi
 
     for $BUILD in ${builds[@]}; do
