@@ -50,86 +50,95 @@ for CONT in ${containers[@]}; do
     CONT_DIR="$CONFIG_DIR/$CONT"
     cd "$CONT_DIR"
 
-    for script in get-release compare-version; do
-        if ! [ -e "$CONT_DIR/$script" ]; then
-            conterr "$CONT" "script '$script' not found"
-            continue 2
-        elif ! [ -x "$CONT_DIR/$script" ]; then
-            conterr "$CONT" "file '$script' is not set executable"
-            continue 2
-        fi
-    done
-
-    # Magic stdout/stderr to variables http://stackoverflow.com/a/26827443
-    #   ret     is $?
-    #   version is stdout
-    #   release is stderr
-    . <({ release=$({ version=$(./get-release); } 2>&1; ret=$?; { declare -p version; declare -p ret; } >&2); declare -p release; } 2>&1)
-
-    if [ $ret -ne 0 ]; then
-        echo "$version" | sed 's|^|   |g' >&2
-        conterr "$CONT" "get-release returned $ret"
-        continue
+    builds=('')
+    if [ -d build ]; then
+        builds=($(find . -maxdepth 0 -type d | xargs))
     fi
 
-    print_msg "   Latest version is  '$version'"
+    for $BUILD in ${builds[@]}; do
+        echo "build: $CONT/$BUILD"
 
-    RELEASE_FILE="$RELEASE_DIR/$CONT/$version"
-    PREV_RELEASE_FILE="$RELEASE_DIR/$CONT/.latest_build"
-    # Save release info to file
-    mkdir -p "$RELEASE_DIR/$CONT"
-    echo "$release" > "$RELEASE_FILE"
+        for script in get-release compare-version; do
+            if ! [ -e "$CONT_DIR/$script" ]; then
+                conterr "$CONT" "script '$script' not found"
+                continue 2
+            elif ! [ -x "$CONT_DIR/$script" ]; then
+                conterr "$CONT" "file '$script' is not set executable"
+                continue 2
+            fi
+        done
 
-    if [ -f "$PREV_RELEASE_FILE" ]; then
-        if [ -h "$PREV_RELEASE_FILE" ]; then
-            ACTUAL_FILE="$(readlink -f "$PREV_RELEASE_FILE" 2>/dev/null)"
-            if ! [ -f "$ACTUAL_FILE" ]; then
-                arerror "Symbolic link $PREV_RELEASE_FILE points to a file that doesn't exist. "
-                DEFAULT_BUILD=true
+        # Magic stdout/stderr to variables http://stackoverflow.com/a/26827443
+        #   ret     is $?
+        #   version is stdout
+        #   release is stderr
+        . <({ release=$({ version=$(./get-release); } 2>&1; ret=$?; { declare -p version; declare -p ret; } >&2); declare -p release; } 2>&1)
+
+        if [ $ret -ne 0 ]; then
+            echo "$version" | sed 's|^|   |g' >&2
+            conterr "$CONT" "get-release returned $ret"
+            continue
+        fi
+
+        print_msg "   Latest version is  '$version'"
+
+        RELEASE_FILE="$RELEASE_DIR/$CONT/$version"
+        PREV_RELEASE_FILE="$RELEASE_DIR/$CONT/.latest_build"
+        # Save release info to file
+        mkdir -p "$RELEASE_DIR/$CONT"
+        echo "$release" > "$RELEASE_FILE"
+
+        if [ -f "$PREV_RELEASE_FILE" ]; then
+            if [ -h "$PREV_RELEASE_FILE" ]; then
+                ACTUAL_FILE="$(readlink -f "$PREV_RELEASE_FILE" 2>/dev/null)"
+                if ! [ -f "$ACTUAL_FILE" ]; then
+                    arerror "Symbolic link $PREV_RELEASE_FILE points to a file that doesn't exist. "
+                    DEFAULT_BUILD=true
+                else
+                    PREV_RELEASE_VERSION="$(basename "$ACTUAL_FILE")"
+                    print_msg "   Previous build was '$PREV_RELEASE_VERSION'"
+                fi
             else
-                PREV_RELEASE_VERSION="$(basename "$ACTUAL_FILE")"
-                print_msg "   Previous build was '$PREV_RELEASE_VERSION'"
+                print_msg "   Warning: $PREV_RELEASE_FILE isn't a symbolic link,"
+                print_msg "            continuing without previous version argument"
             fi
         else
-            print_msg "   Warning: $PREV_RELEASE_FILE isn't a symbolic link,"
-            print_msg "            continuing without previous version argument"
+            print_msg "   Warning: $PREV_RELEASE_FILE doesn't exist"
+            DEFAULT_BUILD=true
         fi
-    else
-        print_msg "   Warning: $PREV_RELEASE_FILE doesn't exist"
-        DEFAULT_BUILD=true
-    fi
 
-    if [ "$DEFAULT_BUILD" = "true" ]; then
-        print_msg "   Building image as fallback, some version-comparison details are missing"
-        BUILD=true
-    else
-        ./compare-version "$version" "$RELEASE_FILE" "${PREV_RELEASE_VERSION:-}" "$ACTUAL_FILE" && ret=$? || ret=$?
-        case $ret in
-            0)   print_msg "   Release version is newer!"; BUILD=true;;
-            255) print_msg "   Already most recent version"; continue;;
-            *)   conterr "$CONT" "compare-version returned with exit code $ret";;
-        esac
-    fi
+        if [ "$DEFAULT_BUILD" = "true" ]; then
+            print_msg "   Building image as fallback, some version-comparison details are missing"
+            BUILD=true
+        else
+            ./compare-version "$version" "$RELEASE_FILE" "${PREV_RELEASE_VERSION:-}" "$ACTUAL_FILE" && ret=$? || ret=$?
+            case $ret in
+                0)   print_msg "   Release version is newer!"; BUILD=true;;
+                255) print_msg "   Already most recent version"; continue;;
+                *)   conterr "$CONT" "compare-version returned with exit code $ret";;
+            esac
+        fi
 
-    # To build, or not to build, that is the question
-    [ "$BUILD" != "true" ] && continue
+        # To build, or not to build, that is the question
+        [ "$BUILD" != "true" ] && continue
 
-    print_msg "=> Building image $CONT"
+        print_msg "=> Building image $CONT"
 
-    # Load image environment variables
-    env="$([ -f env ] && cat env | xargs)"
+        # Load image environment variables
+        env="$([ -f env ] && cat env | xargs)"
 
-    # Build image using env
-    env $env build-image
+        # Build image using env
+        env $env build-image
 
-    if [ $? -eq 0 ]; then
-        print_msg "=> Successfully built $CONT"
+        if [ $? -eq 0 ]; then
+            print_msg "=> Successfully built $CONT"
 
-        print_msg "   Linking latest release as '.latest_build'"
-        ln -sfv "$RELEASE_FILE" "$PREV_RELEASE_FILE"
+            print_msg "   Linking latest release as '.latest_build'"
+            ln -sfv "$RELEASE_FILE" "$PREV_RELEASE_FILE"
 
-        # Remove all source/build files to make way for next image
-        rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
-    fi
+            # Remove all source/build files to make way for next image
+            rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
+        fi
 
+    done
 done
