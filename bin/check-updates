@@ -91,27 +91,28 @@ for CONT in ${containers[@]}; do
         print_msg "   Latest version is  '$version'"
 
         RELEASE_FILE="$RELEASE_DIR/$CONT/$version"
-        PREV_RELEASE_FILE="$RELEASE_DIR/$CONT/.latest_build"
+        LATEST_BUILD_FILE="$(join - '.latest_build' $BUILD)"
+        LATEST_BUILD_PATH="$RELEASE_DIR/$CONT/$LATEST_BUILD_FILE"
         # Save release info to file
         mkdir -p "$RELEASE_DIR/$CONT"
         echo "$release" > "$RELEASE_FILE"
 
-        if [ -f "$PREV_RELEASE_FILE" ]; then
-            if [ -h "$PREV_RELEASE_FILE" ]; then
-                ACTUAL_FILE="$(readlink -f "$PREV_RELEASE_FILE" 2>/dev/null)"
+        if [ -f "$LATEST_BUILD_PATH" ]; then
+            if [ -h "$LATEST_BUILD_PATH" ]; then
+                ACTUAL_FILE="$(readlink -f "$LATEST_BUILD_PATH" 2>/dev/null)"
                 if ! [ -f "$ACTUAL_FILE" ]; then
-                    arerror "Symbolic link $PREV_RELEASE_FILE points to a file that doesn't exist. "
+                    arerror "Symbolic link $LATEST_BUILD_PATH points to a file that doesn't exist. "
                     DEFAULT_BUILD=true
                 else
-                    PREV_RELEASE_VERSION="$(basename "$ACTUAL_FILE")"
-                    print_msg "   Previous build was '$PREV_RELEASE_VERSION'"
+                    PREV_BUILD_VERSION="$(basename "$ACTUAL_FILE")"
+                    print_msg "   Previous build was '$PREV_BUILD_VERSION'"
                 fi
             else
-                print_msg "   Warning: $PREV_RELEASE_FILE isn't a symbolic link,"
+                print_msg "   Warning: $LATEST_BUILD_PATH isn't a symbolic link,"
                 print_msg "            continuing without previous version argument"
             fi
         else
-            print_msg "   Warning: $PREV_RELEASE_FILE doesn't exist"
+            print_msg "   Warning: $LATEST_BUILD_PATH doesn't exist"
             DEFAULT_BUILD=true
         fi
 
@@ -119,7 +120,7 @@ for CONT in ${containers[@]}; do
             print_msg "   Building image as fallback, some version-comparison details are missing"
             BUILD=true
         else
-            ./compare-version "$version" "$RELEASE_FILE" "${PREV_RELEASE_VERSION:-}" "$ACTUAL_FILE" && ret=$? || ret=$?
+            ./compare-version "$version" "$RELEASE_FILE" "${PREV_BUILD_VERSION:-}" "$ACTUAL_FILE" && ret=$? || ret=$?
             case $ret in
                 0)   print_msg "   Release version is newer!"; BUILD=true;;
                 255) print_msg "   Already most recent version"; continue;;
@@ -141,8 +142,8 @@ for CONT in ${containers[@]}; do
         if [ $? -eq 0 ]; then
             print_msg "=> Successfully built $CONT_BUILD"
 
-            print_msg "   Linking latest release as '.latest_build'"
-            ln -sfv "$RELEASE_FILE" "$PREV_RELEASE_FILE"
+            print_msg "   Linking latest release as '$LATEST_BUILD_FILE'"
+            ln -sfv "$RELEASE_FILE" "$LATEST_BUILD_PATH"
 
             # Remove all source/build files to make way for next image
             rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
