@@ -116,4 +116,20 @@ for CONT in ${containers[@]}; do
 
     print_msg "=> Building image $CONT"
 
+    # Load image environment variables
+    env="$([ -f env ] && cat env | xargs)"
+
+    # Build image using env
+    env $env build-image
+
+    if [ $? -eq 0 ]; then
+        print_msg "=> Successfully built $CONT"
+
+        print_msg "   Linking latest release as '.latest_build'"
+        ln -sfv "$RELEASE_FILE" "$PREV_RELEASE_FILE"
+
+        # Remove all source/build files to make way for next image
+        rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
+    fi
+
 done
