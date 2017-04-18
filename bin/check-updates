@@ -55,6 +55,16 @@ for CONT in ${containers[@]}; do
         BUILDS=($(cd build; find * -maxdepth 0 -type d | xargs))
     fi
 
+    for script in get-release compare-version; do
+        if ! [ -e "$CONT_DIR/$script" ]; then
+            conterr "$CONT" "script '$script' not found"
+            continue 2
+        elif ! [ -x "$CONT_DIR/$script" ]; then
+            conterr "$CONT" "file '$script' is not set executable"
+            continue 2
+        fi
+    done
+
     j=0
     for BUILD in ${BUILDS[@]}; do
         if [ "$BUILD" = "default" ]; then
@@ -65,16 +75,6 @@ for CONT in ${containers[@]}; do
         fi
 
         CONT_BUILD=$(join : "$CONT" $BUILD)
-
-        for script in get-release compare-version; do
-            if ! [ -e "$CONT_DIR/$script" ]; then
-                conterr "$CONT" "script '$script' not found"
-                continue 2
-            elif ! [ -x "$CONT_DIR/$script" ]; then
-                conterr "$CONT" "file '$script' is not set executable"
-                continue 2
-            fi
-        done
 
         # Magic stdout/stderr to variables http://stackoverflow.com/a/26827443
         #   ret     is $?
