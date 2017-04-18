@@ -80,7 +80,7 @@ for CONT in ${containers[@]}; do
         #   ret     is $?
         #   version is stdout
         #   release is stderr
-        . <({ release=$({ version=$(./get-release); } 2>&1; ret=$?; { declare -p version; declare -p ret; } >&2); declare -p release; } 2>&1)
+        . <({ release=$({ version=$(./get-release "$BUILD"); } 2>&1; ret=$?; { declare -p version; declare -p ret; } >&2); declare -p release; } 2>&1)
 
         if [ $ret -ne 0 ]; then
             echo "$version" | sed 's|^|   |g' >&2
@@ -120,7 +120,7 @@ for CONT in ${containers[@]}; do
             print_msg "   Building image as fallback, some version-comparison details are missing"
             BUILD=true
         else
-            ./compare-version "$version" "$RELEASE_FILE" "${PREV_BUILD_VERSION:-}" "$ACTUAL_FILE" && ret=$? || ret=$?
+            ./compare-version "$version" "$RELEASE_FILE" "${PREV_BUILD_VERSION:-}" "$ACTUAL_FILE" "$BUILD" && ret=$? || ret=$?
             case $ret in
                 0)   print_msg "   Release version is newer!"; BUILD=true;;
                 255) print_msg "   Already most recent version"; continue;;
