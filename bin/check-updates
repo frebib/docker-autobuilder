@@ -41,7 +41,6 @@ else
     exit 0
 fi
 
-
 trap 'looperr "$CONT" "$LINENO" "$?"; continue' ERR
 set +e # Errors now handled by the trap
 for CONT in ${containers[@]}; do
@@ -155,7 +154,8 @@ for CONT in ${containers[@]}; do
             print_msg "=> Successfully built $CONT_BUILD"
 
             print_msg "   Linking latest release as '$LATEST_BUILD_FILE'"
-            ln -sfv "$version" "$LATEST_BUILD_FILE" | indent
+            # ln -r creates a relative symlink, however busybox says no
+            (cd "$(dirname "$LATEST_BUILD_PATH")"; ln -sfv "$version" "$LATEST_BUILD_FILE" | indent)
 
             # Remove all source/build files to make way for next image
             rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
