@@ -82,7 +82,7 @@ for CONT in ${containers[@]}; do
 
     if [ -f "$PREV_RELEASE_FILE" ]; then
         if [ -h "$PREV_RELEASE_FILE" ]; then
-            ACTUAL_FILE=$(readlink -m "$PREV_RELEASE_FILE")
+            ACTUAL_FILE="$(readlink -f "$PREV_RELEASE_FILE" 2>/dev/null)"
             if ! [ -f "$ACTUAL_FILE" ]; then
                 arerror "Symbolic link $PREV_RELEASE_FILE points to a file that doesn't exist. "
                 DEFAULT_BUILD=true
