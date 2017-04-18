@@ -7,6 +7,7 @@ looperr() { print_msg "=> Error updating '$1', line $2, exit-code $3"; }
 conterr() { print_msg "   Error: $1: $2"; }
 arerror() { print_msg "=> Error: $(basename $0): $*"; }
 error()   { print_msg "=> Error: $(basename $0): $*"; }
+indent()  { sed -e 's|^|   |g'; }
 
 print_msg "=> Performing update check at $(date +"%a %d %b %Y, %H:%M")"
 
@@ -154,7 +155,7 @@ for CONT in ${containers[@]}; do
             print_msg "=> Successfully built $CONT_BUILD"
 
             print_msg "   Linking latest release as '$LATEST_BUILD_FILE'"
-            ln -sfv "$RELEASE_FILE" "$LATEST_BUILD_PATH"
+            ln -sfv "$version" "$LATEST_BUILD_FILE" | indent
 
             # Remove all source/build files to make way for next image
             rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
