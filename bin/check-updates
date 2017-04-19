@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -n "$DEBUG" ] && set -ax
 set -e
 
 join() { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
@@ -80,7 +81,9 @@ for CONT in ${containers[@]}; do
         #   ret     is $?
         #   version is stdout
         #   release is stderr
+        [ -n "$DEBUG" ] && set +ax
         . <({ release=$({ version=$(./get-release "$BUILD"); } 2>&1; ret=$?; { declare -p version; declare -p ret; } >&2); declare -p release; } 2>&1)
+        [ -n "$DEBUG" ] && set -ax
 
         if [ $ret -ne 0 ]; then
             echo "$version" | sed 's|^|   |g' >&2
