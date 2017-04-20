@@ -121,18 +121,18 @@ for CONT in ${containers[@]}; do
 
         if [ "$DEFAULT_BUILD" = "true" ]; then
             print_msg "   Building image as fallback, some version-comparison details are missing"
-            BUILD=true
+            SHOULD_BUILD=true
         else
             ./compare-version "$version" "$RELEASE_FILE" "${PREV_BUILD_VERSION:-}" "$ACTUAL_FILE" "$BUILD" && ret=$? || ret=$?
             case $ret in
-                0)   print_msg "   Release version is newer!"; BUILD=true;;
+                0)   print_msg "   Release version is newer!"; SHUOLD_BUILD=true;;
                 255) print_msg "   Already most recent version"; continue;;
                 *)   conterr "$CONT_BUILD" "compare-version returned with exit code $ret";;
             esac
         fi
 
         # To build, or not to build, that is the question
-        [ "$BUILD" != "true" ] && continue
+        [ "$SHOULD_BUILD" != "true" ] && continue
 
         print_msg "=> Building image $CONT_BUILD"
 
