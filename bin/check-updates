@@ -158,6 +158,10 @@ for CONT in ${containers[@]}; do
         done
         HOOK_OPTS="$(echo "${HOOKS[@]}" | sed -r 's|[^ ]+|-h & |g')"
 
+        export BUILD \
+               RELEASE_FILE \
+               RELEASE_VERSION="$version"
+
         # Build image using env
         env $ENV_OPTS build-image $HOOK_OPTS
 
