@@ -147,11 +147,19 @@ for CONT in ${containers[@]}; do
         # Join files into command as to source them when executed
         SOURCE_ENV=$(echo "${ENV_FILES[@]}" | sed -r 's|[^ ]+|. &; |g')
         # Source env files into empty environment, removing defaults & 'export'
-        ENVS=$(env -i sh -c "set -o allexport; $SOURCE_ENV env" \
+        ENV_OPTS=$(env -i sh -c "set -o allexport; $SOURCE_ENV env" \
             | sed -e '/^PWD=/d; /^SHLVL=/d; /^_=/d; s/^export//g' | xargs)
 
+        HOOKS=()
+        for dir in build/$BUILD/hooks hooks; do
+            if [ -d "$dir" ]; then
+                HOOKS+=("$(pwd)/$dir")
+            fi
+        done
+        HOOK_OPTS="$(echo "${HOOKS[@]}" | sed -r 's|[^ ]+|-h & |g')"
+
         # Build image using env
-        env $ENVS build-image
+        env $ENV_OPTS build-image $HOOK_OPTS
 
         if [ $? -eq 0 ]; then
             print_msg "=> Successfully built $CONT_BUILD"
