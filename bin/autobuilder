@@ -29,7 +29,22 @@ fi
 
 cd "$CONFIG_DIR"
 
-containers=($(find . -maxdepth 1 -type d -not -name '.*' | sed 's|^\./||g' | tac | xargs))
+run_autohook() {
+    local HOOKS_DIR="$CONFIG_DIR/hooks"
+    local HOOK_EXE="$HOOKS_DIR/$1"
+    if [ -d "$HOOKS_DIR" -a -f "$HOOK_EXE" ]; then
+        if [ -x "$HOOK_EXE" ]; then
+            "$(readlink -f "$HOOK_EXE")" 2>&1 | indent
+        else
+            arerror "Hook $HOOK_EXE is not executable!"
+        fi
+    fi
+}
+
+# Run pre-check hook
+run_autohook pre_update
+
+containers=($(find . -maxdepth 1 -type d -not -name '.*' -not -name 'hooks' | sed 's|^\./||g' | tac | xargs))
 
 # Count the containers
 COUNT=${#containers[@]}
@@ -162,8 +177,12 @@ for CONT in ${containers[@]}; do
                RELEASE_FILE \
                RELEASE_VERSION="$version"
 
+        run_autohook pre_build
+
         # Build image using env
         env $ENV_OPTS build-image $HOOK_OPTS
+
+        run_autohook post_build
 
         if [ $? -eq 0 ]; then
             print_msg "=> Successfully built $CONT_BUILD"
@@ -178,3 +197,5 @@ for CONT in ${containers[@]}; do
 
     done
 done
+
+run_autohook post_update
