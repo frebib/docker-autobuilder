@@ -15,8 +15,6 @@ print_msg "=> Performing update check at $(date +"%a %d %b %Y, %H:%M")"
 CONFIG_DIR=$(realpath ${1:-${CONFIG_DIR:-/config}})
 RELEASE_DIR=$(realpath ${RELEASE_DIR:-/release})
 
-cd "$CONFIG_DIR"
-
 if ! [ -d "$CONFIG_DIR" ]; then
     error "Configuration directory '$CONFIG_DIR' doesn't exist"
     exit 5
@@ -28,6 +26,8 @@ if ! [ -d "$RELEASE_DIR" ]; then
         exit 6
     }
 fi
+
+cd "$CONFIG_DIR"
 
 containers=($(find . -maxdepth 1 -type d -not -name '.*' | sed 's|^\./||g' | tac | xargs))
 
