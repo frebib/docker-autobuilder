@@ -1,0 +1,18 @@
+version: "2"
+
+services:
+  autobuilder:
+    image: frebib/autobuilder
+    privileged: true
+    environment:
+      # 30 minutes past every hour
+      - CHECK_INTERVAL=30 * * * *
+    volumes:
+      - ./config:/config
+      - ./release:/release
+      # Uncomment this line if you want images saved to file
+      #- ./images:/images
+      - ~/.docker:/.docker:ro
+    restart: unless-stopped
+
+# vim: sw=2
