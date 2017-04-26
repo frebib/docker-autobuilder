@@ -7,5 +7,5 @@ ENV CHGRP_PATHS="/config /release"
 VOLUME /config /release
 ADD bin/* /usr/local/bin/
 
-ENTRYPOINT [ "/sbin/tini", "--", "run-docker", "autobuilder" ]
+ENTRYPOINT [ "/sbin/tini", "--", "run-docker", "entrypoint" ]
 CMD [ "crond", "-f", "-l", "6", "-L", "/dev/stdout" ]
