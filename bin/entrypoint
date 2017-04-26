@@ -8,6 +8,6 @@ paths="$(echo "$CHGRP_PATHS" | sed -r 's|[^ ]+|-p &|g')"
 
 # Add cron job for performing auto-building
 rm -f /etc/crontabs/*
-echo "$CHECK_INTERVAL install-deps && as-builder $paths -- check-updates" | crontab -u root -
+echo "$CHECK_INTERVAL install-deps && as-builder $paths -- autobuilder" | crontab -u root -
 
 exec "$@"
