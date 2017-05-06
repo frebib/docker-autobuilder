@@ -90,6 +90,8 @@ for CONT in ${containers[@]}; do
             print_msg "\n=> Checking build $BUILD ($j/${#BUILDS[@]})"
         fi
 
+        unset SHOULD_BUILD
+
         CONT_BUILD=$(join : "$CONT" $BUILD)
 
         # Magic stdout/stderr to variables http://stackoverflow.com/a/26827443
@@ -111,6 +113,8 @@ for CONT in ${containers[@]}; do
         RELEASE_FILE="$RELEASE_DIR/$CONT/$version"
         LATEST_BUILD_FILE="$(join - '.latest_build' $BUILD)"
         LATEST_BUILD_PATH="$RELEASE_DIR/$CONT/$LATEST_BUILD_FILE"
+        LATEST_BUILD_GIT_HEAD_FILE="$(join - '.git_head' $BUILD)"
+        LATEST_BUILD_GIT_HEAD_PATH="$RELEASE_DIR/$CONT/$LATEST_BUILD_GIT_HEAD_FILE"
         # Save release info to file
         mkdir -p "$RELEASE_DIR/$CONT"
         echo "$release" > "$RELEASE_FILE"
@@ -140,16 +144,11 @@ for CONT in ${containers[@]}; do
         else
             ./compare-version "$version" "$RELEASE_FILE" "${PREV_BUILD_VERSION:-}" "$ACTUAL_FILE" "$BUILD" && ret=$? || ret=$?
             case $ret in
-                0)   print_msg "   Release version is newer!"; SHUOLD_BUILD=true;;
-                255) print_msg "   Already most recent version"; continue;;
+                0)   print_msg "   Release version is newer!"; SHOULD_BUILD=true;;
+                255) print_msg "   Already most recent version";;
                 *)   conterr "$CONT_BUILD" "compare-version returned with exit code $ret";;
             esac
         fi
-
-        # To build, or not to build, that is the question
-        [ "$SHOULD_BUILD" != "true" ] && continue
-
-        print_msg "=> Building image $CONT_BUILD"
 
         # Load image environment variables
         ENV_FILES=()
@@ -166,6 +165,31 @@ for CONT in ${containers[@]}; do
         # Source env files into empty environment, removing defaults & 'export'
         ENV_OPTS=$(env -i sh -c "set -o allexport; $SOURCE_ENV env" \
             | sed -e '/^PWD=/d; /^SHLVL=/d; /^_=/d; s/^export//g' | xargs)
+
+        parse_envvar() { env -i $ENV_OPTS | grep $1 | sed "s|^$1=||"; }
+
+
+        # To build, or not to build, that is the question
+        if [ "$SHOULD_BUILD" != "true" ]; then
+            GIT_TAG="$(parse_envvar GIT_TAG)"
+            GIT_REPO="$(parse_envvar GIT_REPO)"
+            if [ -n "$GIT_REPO" ]; then
+                # Fetch the remote HEAD for the appropriate tag/branch
+                REMOTE_HEAD="$(git ls-remote --exit-code "$GIT_REPO" "${GIT_TAG:-master}" | head -n1 | cut -f1)"
+                BUILD_HEAD="$(cat "$LATEST_BUILD_GIT_HEAD_PATH" 2>/dev/null || true)"
+
+                if [ "$REMOTE_HEAD" != "$BUILD_HEAD" ]; then
+                    print_msg "   Remote git HEAD is different to the previous build."
+                else
+                    # Otherwise loop around to the next image
+                    continue
+                fi
+            else
+                continue
+            fi
+        fi
+        print_msg "=> Building image $CONT_BUILD"
+
 
         HOOKS=()
         for dir in build/$BUILD/hooks hooks; do
@@ -192,6 +216,11 @@ for CONT in ${containers[@]}; do
             print_msg "   Linking latest release as '$LATEST_BUILD_FILE'"
             # ln -r creates a relative symlink, however busybox says no
             (cd "$(dirname "$LATEST_BUILD_PATH")"; ln -sfv "$version" "$LATEST_BUILD_FILE" | indent)
+
+            # Save the git head of build image to releases directory
+            HEAD="$(git -C /src show-ref $GIT_TAG | head -n1 | cut -d' ' -f1)"
+            print_msg "   Saving HEAD ($HEAD) to $LATEST_BUILD_GIT_HEAD_FILE"
+            echo "$HEAD" > "$LATEST_BUILD_GIT_HEAD_PATH"
 
             # Remove all source/build files to make way for next image
             rm -rf /src/{,.}* /app/{,.}* &>/dev/null || true
