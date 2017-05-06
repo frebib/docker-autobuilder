@@ -161,6 +161,8 @@ for CONT in ${containers[@]}; do
         done
         # Join files into command as to source them when executed
         SOURCE_ENV=$(echo "${ENV_FILES[@]}" | sed -r 's|[^ ]+|. &; |g')
+        # TODO: Don't source these files, it's dumb and pointless
+        #       They should just be parsed instead
         # Source env files into empty environment, removing defaults & 'export'
         ENV_OPTS=$(env -i sh -c "set -o allexport; $SOURCE_ENV env" \
             | sed -e '/^PWD=/d; /^SHLVL=/d; /^_=/d; s/^export//g' | xargs)
