@@ -8,6 +8,12 @@ paths="$(echo "$CHGRP_PATHS" | sed -r 's|[^ ]+|-p &|g')"
 
 # Add cron job for performing auto-building
 rm -f /etc/crontabs/*
-echo "$CHECK_INTERVAL install-deps && as-builder $paths -- autobuilder" | crontab -u root -
+builder_cmd="install-deps && as-builder $paths -- autobuilder"
+echo "$CHECK_INTERVAL $builder_cmd" | crontab -u root -
+
+# Run a single build on container start
+if [ $BUILD_ON_START = 'yes' ]; then
+    eval $builder_cmd
+fi
 
 exec "$@"

@@ -1,8 +1,9 @@
 FROM frebib/builder:latest
 MAINTAINER Joe Groocock <frebib@gmail.com>
 
-ENV CHECK_INTERVAL="*/30 * * * *"
-ENV CHGRP_PATHS="/config /release"
+ENV CHECK_INTERVAL="*/30 * * * *" \
+    CHGRP_PATHS="/config /release" \
+    BUILD_ON_START="yes"
 
 VOLUME /config /release
 ADD bin/* /usr/local/bin/
